@@ -64,6 +64,11 @@ RUN KERNEL_VER=$(ls /usr/lib/modules/ | head -1) \
     && echo "Vérification dans le tree DKMS:" \
     && ls /usr/src/mediatek-mt7927-${MT7927_VER}/drivers/bluetooth/ | head -5 \
     && rm -rf linux-${KVER_BASE} linux-${KVER_BASE}.tar.xz \
+    && echo "Clonage des sources mt76..." \
+    && git clone https://github.com/openwrt/mt76.git \
+         /usr/src/mediatek-mt7927-${MT7927_VER}/mt76 \
+    && echo "Sources mt76 clonées:" \
+    && ls /usr/src/mediatek-mt7927-${MT7927_VER}/mt76/ | head -5 \
     && dkms add -m mediatek-mt7927 -v ${MT7927_VER} \
     && dkms build -m mediatek-mt7927 -v ${MT7927_VER} -k ${KERNEL_VER} \
     || (cat /var/lib/dkms/mediatek-mt7927/${MT7927_VER}/build/make.log && exit 1) \
