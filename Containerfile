@@ -37,43 +37,128 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
 
 # ── Driver MT7927 ─────────────────────────────────────────────────────────────
 ARG MT7927_VER="2.1"
+ARG MT76_KVER="6.19.4"
 
 RUN KERNEL_VER=$(ls /usr/lib/modules/ | head -1) \
     && echo "Kernel trouvé: ${KERNEL_VER}" \
-    && dnf5 -y install dkms git make gcc patch wget \
+    && dnf5 -y install dkms git make gcc patch wget python3 bsdtar \
          kernel-devel-${KERNEL_VER} \
     && dnf5 clean all
 
 RUN git clone https://github.com/marcin-fm/mediatek-mt7927-dkms.git \
       /tmp/mediatek-mt7927-dkms
 
-RUN install -d /usr/src/mediatek-mt7927-${MT7927_VER} \
-    && cp -r /tmp/mediatek-mt7927-dkms/. /usr/src/mediatek-mt7927-${MT7927_VER}/
+# Télécharger le tarball kernel 6.19.4 pour extraire mt76 + bluetooth
+RUN wget -q https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-${MT76_KVER}.tar.xz \
+      -O /tmp/linux-${MT76_KVER}.tar.xz
 
+# Extraire mt76 depuis le kernel (chemin exact comme dans le PKGBUILD)
+RUN mkdir -p /tmp/mt76 \
+    && tar -xf /tmp/linux-${MT76_KVER}.tar.xz \
+         --strip-components=6 \
+         -C /tmp/mt76 \
+         "linux-${MT76_KVER}/drivers/net/wireless/mediatek/mt76" \
+    && echo "mt76 extrait:" && ls /tmp/mt76/ | head -5
+
+# Extraire bluetooth (seulement les 7 fichiers nécessaires)
+RUN mkdir -p /tmp/bluetooth \
+    && tar -xf /tmp/linux-${MT76_KVER}.tar.xz \
+         --strip-components=3 \
+         -C /tmp/bluetooth \
+         "linux-${MT76_KVER}/drivers/bluetooth" \
+    && echo "bluetooth extrait:" && ls /tmp/bluetooth/ | head -5
+
+# Appliquer les patches wifi sur mt76
+RUN cd /tmp/mt76 \
+    && patch -p1 < /tmp/mediatek-mt7927-dkms/mt7902-wifi-6.19.patch \
+    && patch -p1 < /tmp/mediatek-mt7927-dkms/mt6639-wifi-init.patch \
+    && patch -p1 < /tmp/mediatek-mt7927-dkms/mt6639-wifi-dma.patch \
+    && echo "Patches wifi appliqués"
+
+# Créer les Kbuild files (copiés exactement du PKGBUILD)
+RUN cat > /tmp/mt76/Kbuild <<'EOF'
+obj-m += mt76.o
+obj-m += mt76-connac-lib.o
+obj-m += mt792x-lib.o
+obj-m += mt7921/
+obj-m += mt7925/
+
+mt76-y := \
+	mmio.o util.o trace.o dma.o mac80211.o debugfs.o eeprom.o \
+	tx.o agg-rx.o mcu.o wed.o scan.o channel.o pci.o
+
+mt76-connac-lib-y := mt76_connac_mcu.o mt76_connac_mac.o mt76_connac3_mac.o
+
+mt792x-lib-y := mt792x_core.o mt792x_mac.o mt792x_trace.o \
+		mt792x_debugfs.o mt792x_dma.o mt792x_acpi_sar.o
+
+CFLAGS_trace.o := -I$(src)
+CFLAGS_mt792x_trace.o := -I$(src)
+EOF
+
+RUN cat > /tmp/mt76/mt7921/Kbuild <<'EOF'
+obj-m += mt7921-common.o
+obj-m += mt7921e.o
+
+mt7921-common-y := mac.o mcu.o main.o init.o debugfs.o
+mt7921e-y := pci.o pci_mac.o pci_mcu.o
+EOF
+
+RUN cat > /tmp/mt76/mt7925/Kbuild <<'EOF'
+obj-m += mt7925-common.o
+obj-m += mt7925e.o
+
+mt7925-common-y := mac.o mcu.o regd.o main.o init.o debugfs.o
+mt7925e-y := pci.o pci_mac.o pci_mcu.o
+EOF
+
+# Assembler le tree DKMS final
+RUN DKMSDIR="/usr/src/mediatek-mt7927-${MT7927_VER}" \
+    && install -d ${DKMSDIR} \
+    && install -Dm644 /tmp/mediatek-mt7927-dkms/dkms.conf          ${DKMSDIR}/dkms.conf \
+    && install -Dm755 /tmp/mediatek-mt7927-dkms/dkms-patchmodule.sh ${DKMSDIR}/dkms-patchmodule.sh \
+    && install -Dm644 /tmp/mediatek-mt7927-dkms/mt6639-bt-6.19.patch    ${DKMSDIR}/mt6639-bt-6.19.patch \
+    && install -Dm644 /tmp/mediatek-mt7927-dkms/mt6639-wifi-init.patch  ${DKMSDIR}/mt6639-wifi-init.patch \
+    && install -dm755 ${DKMSDIR}/drivers/bluetooth \
+    && install -m644 /tmp/bluetooth/btusb.c  /tmp/bluetooth/btmtk.c \
+                     /tmp/bluetooth/btmtk.h  /tmp/bluetooth/btbcm.c \
+                     /tmp/bluetooth/btbcm.h  /tmp/bluetooth/btintel.h \
+                     /tmp/bluetooth/btrtl.h  ${DKMSDIR}/drivers/bluetooth/ \
+    && install -dm755 ${DKMSDIR}/mt76/mt7921 ${DKMSDIR}/mt76/mt7925 \
+    && install -m644 /tmp/mt76/*.c /tmp/mt76/*.h ${DKMSDIR}/mt76/ \
+    && install -m644 /tmp/mt76/Kbuild            ${DKMSDIR}/mt76/ \
+    && install -m644 /tmp/mt76/mt7921/*.c /tmp/mt76/mt7921/*.h ${DKMSDIR}/mt76/mt7921/ \
+    && install -m644 /tmp/mt76/mt7921/Kbuild                   ${DKMSDIR}/mt76/mt7921/ \
+    && install -m644 /tmp/mt76/mt7925/*.c /tmp/mt76/mt7925/*.h ${DKMSDIR}/mt76/mt7925/ \
+    && install -m644 /tmp/mt76/mt7925/Kbuild                   ${DKMSDIR}/mt76/mt7925/ \
+    && echo "Tree DKMS assemblé"
+
+# Télécharger et extraire le firmware ASUS
+RUN TOKEN_URL="https://cdnta.asus.com/api/v1/TokenHQ?filePath=https:%2F%2Fdlcdnta.asus.com%2Fpub%2FASUS%2Fmb%2F08WIRELESS%2FDRV_WiFi_MTK_MT7925_MT7927_TP_W11_64_V5603998_20250709R.zip%3Fmodel%3DROG%2520CROSSHAIR%2520X870E%2520HERO&systemCode=rog" \
+    && JSON=$(curl -sf "${TOKEN_URL}" -X POST -H 'Origin: https://rog.asus.com') \
+    && EXPIRES=$(echo $JSON | grep -oP '"expires":"\K[^"]+') \
+    && SIG=$(echo $JSON | grep -oP '"signature":"\K[^"]+') \
+    && KID=$(echo $JSON | grep -oP '"keyPairId":"\K[^"]+') \
+    && wget -q "https://dlcdnta.asus.com/pub/ASUS/mb/08WIRELESS/DRV_WiFi_MTK_MT7925_MT7927_TP_W11_64_V5603998_20250709R.zip?model=ROG%20CROSSHAIR%20X870E%20HERO&Signature=${SIG}&Expires=${EXPIRES}&Key-Pair-Id=${KID}" \
+         -O /tmp/asus-mt7927.zip \
+    && bsdtar -xf /tmp/asus-mt7927.zip -C /tmp mtkwlan.dat \
+    && python3 /tmp/mediatek-mt7927-dkms/extract_firmware.py /tmp/mtkwlan.dat /tmp/firmware \
+    && install -Dm644 /tmp/firmware/BT_RAM_CODE_MT6639_2_1_hdr.bin \
+         /usr/lib/firmware/mediatek/mt6639/BT_RAM_CODE_MT6639_2_1_hdr.bin \
+    && install -Dm644 /tmp/firmware/WIFI_MT6639_PATCH_MCU_2_1_hdr.bin \
+         /usr/lib/firmware/mediatek/mt7927/WIFI_MT6639_PATCH_MCU_2_1_hdr.bin \
+    && install -Dm644 /tmp/firmware/WIFI_RAM_CODE_MT6639_2_1.bin \
+         /usr/lib/firmware/mediatek/mt7927/WIFI_RAM_CODE_MT6639_2_1.bin \
+    && echo "Firmware installé"
+
+# Compiler et installer via DKMS
 RUN KERNEL_VER=$(ls /usr/lib/modules/ | head -1) \
-    && echo "Kernel trouvé: ${KERNEL_VER}" \
-    && KVER_BASE=$(echo ${KERNEL_VER} | grep -oP '^\d+\.\d+\.\d+') \
-    && echo "Téléchargement des sources kernel ${KVER_BASE}..." \
-    && wget -q https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-${KVER_BASE}.tar.xz \
-    && echo "Extraction de drivers/bluetooth..." \
-    && tar -xf linux-${KVER_BASE}.tar.xz linux-${KVER_BASE}/drivers/bluetooth/ \
-    && echo "Fichiers extraits:" \
-    && ls linux-${KVER_BASE}/drivers/bluetooth/ | head -5 \
-    && mkdir -p /usr/src/mediatek-mt7927-${MT7927_VER}/drivers/ \
-    && cp -r linux-${KVER_BASE}/drivers/bluetooth /usr/src/mediatek-mt7927-${MT7927_VER}/drivers/ \
-    && echo "Vérification dans le tree DKMS:" \
-    && ls /usr/src/mediatek-mt7927-${MT7927_VER}/drivers/bluetooth/ | head -5 \
-    && rm -rf linux-${KVER_BASE} linux-${KVER_BASE}.tar.xz \
-    && echo "Clonage des sources mt76..." \
-    && git clone https://github.com/openwrt/mt76.git \
-         /usr/src/mediatek-mt7927-${MT7927_VER}/mt76 \
-    && echo "Sources mt76 clonées:" \
-    && ls /usr/src/mediatek-mt7927-${MT7927_VER}/mt76/ | head -5 \
     && dkms add -m mediatek-mt7927 -v ${MT7927_VER} \
     && dkms build -m mediatek-mt7927 -v ${MT7927_VER} -k ${KERNEL_VER} \
     || (cat /var/lib/dkms/mediatek-mt7927/${MT7927_VER}/build/make.log && exit 1) \
     && dkms install --force -m mediatek-mt7927 -v ${MT7927_VER} -k ${KERNEL_VER}
 
+# Vérification
 RUN KERNEL_VER=$(ls /usr/lib/modules/ | head -1) \
     && MODULE_DIR="/usr/lib/modules/${KERNEL_VER}/updates/dkms" \
     && test -f "${MODULE_DIR}/mt76.ko"    || (echo "ERREUR: mt76.ko manquant!"    && exit 1) \
@@ -88,7 +173,8 @@ RUN echo 'add_drivers+=" mt76 mt7925e mt76_connac_lib "' \
     && KERNEL_VER=$(ls /usr/lib/modules/ | head -1) \
     && dracut --force --kver ${KERNEL_VER}
 
-RUN rm -rf /tmp/mediatek-mt7927-dkms
+RUN rm -rf /tmp/mediatek-mt7927-dkms /tmp/mt76 /tmp/bluetooth \
+           /tmp/linux-*.tar.xz /tmp/asus-mt7927.zip /tmp/firmware
 
 ### LINTING
 ## Verify final image and contents are correct.
