@@ -38,8 +38,10 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
 # ── Driver MT7927 ─────────────────────────────────────────────────────────────
 ARG MT7927_VER="3.1"
 
-RUN dnf5 -y install dkms git make gcc \
-      kernel-devel-$(rpm -q --queryformat '%{VERSION}-%{RELEASE}.%{ARCH}' kernel) \
+RUN KERNEL_VER=$(ls /usr/lib/modules/ | head -1) \
+    && echo "Kernel trouvé: ${KERNEL_VER}" \
+    && dnf5 -y install dkms git make gcc patch wget \
+         kernel-devel-${KERNEL_VER} \
     && dnf5 clean all
 
 RUN git clone https://github.com/marcin-fm/mediatek-mt7927-dkms.git \
@@ -52,6 +54,7 @@ RUN KERNEL_VER=$(ls /usr/lib/modules/ | head -1) \
     && echo "Kernel trouvé: ${KERNEL_VER}" \
     && dkms add -m mediatek-mt7927 -v ${MT7927_VER} \
     && dkms build -m mediatek-mt7927 -v ${MT7927_VER} -k ${KERNEL_VER} \
+    || (cat /var/lib/dkms/mediatek-mt7927/${MT7927_VER}/build/make.log && exit 1) \
     && dkms install --force -m mediatek-mt7927 -v ${MT7927_VER} -k ${KERNEL_VER}
 
 RUN KERNEL_VER=$(ls /usr/lib/modules/ | head -1) \
