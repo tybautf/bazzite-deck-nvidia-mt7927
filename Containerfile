@@ -140,7 +140,7 @@ RUN KERNEL_VER=$(ls /usr/lib/modules/ | head -1) \
     && test -f "/usr/lib/modules/${KERNEL_VER}/extra/mt7925e.ko.xz" || (echo "ERREUR: mt7925e.ko.xz manquant!" && exit 1) \
     && echo "OK: mt76.ko.xz et mt7925e.ko.xz présents"
 
-RUN echo -e 'blacklist mt7925e\nblacklist mt76\ninstall mt7925e modprobe --ignore-install mt7925e\ninstall mt76 modprobe --ignore-install mt76' \
+RUN echo -e 'install mt7925e modprobe --ignore-install mt7925e\ninstall mt76 modprobe --ignore-install mt76' \
       > /etc/modprobe.d/mt7927-override.conf
 
 RUN echo 'add_drivers+=" mt76 mt7925e mt76_connac_lib "' \
