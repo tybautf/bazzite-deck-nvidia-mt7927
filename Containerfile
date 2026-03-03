@@ -134,10 +134,11 @@ RUN KERNEL_VER=$(ls /usr/lib/modules/ | head -1) \
     && dkms install --force -m mediatek-mt7927 -v ${MT7927_VER} -k ${KERNEL_VER}
 
 RUN KERNEL_VER=$(ls /usr/lib/modules/ | head -1) \
-    && MODULE_DIR="/usr/lib/modules/${KERNEL_VER}/updates/dkms" \
-    && test -f "${MODULE_DIR}/mt76.ko"    || (echo "ERREUR: mt76.ko manquant!"    && exit 1) \
-    && test -f "${MODULE_DIR}/mt7925e.ko" || (echo "ERREUR: mt7925e.ko manquant!" && exit 1) \
-    && echo "OK: mt76.ko et mt7925e.ko présents"
+    && echo "Modules installés:" \
+    && find /usr/lib/modules/${KERNEL_VER}/extra/ -name "*.ko*" | sort \
+    && test -f "/usr/lib/modules/${KERNEL_VER}/extra/mt76.ko.xz"    || (echo "ERREUR: mt76.ko.xz manquant!"    && exit 1) \
+    && test -f "/usr/lib/modules/${KERNEL_VER}/extra/mt7925e.ko.xz" || (echo "ERREUR: mt7925e.ko.xz manquant!" && exit 1) \
+    && echo "OK: mt76.ko.xz et mt7925e.ko.xz présents"
 
 RUN echo -e 'blacklist mt7925e\nblacklist mt76\ninstall mt7925e modprobe --ignore-install mt7925e\ninstall mt76 modprobe --ignore-install mt76' \
       > /etc/modprobe.d/mt7927-override.conf
