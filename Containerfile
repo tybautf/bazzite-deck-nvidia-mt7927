@@ -151,6 +151,8 @@ RUN echo 'add_drivers+=" mt76 mt7925e mt76_connac_lib "' \
 RUN rm -rf /tmp/mediatek-mt7927-dkms /tmp/mt76 /tmp/bluetooth \
            /tmp/linux-*.tar.xz /tmp/asus-mt7927.zip /tmp/firmware
 
+RUN echo 'mt7925e' > /etc/modules-load.d/mt7927.conf
+
 ### LINTING
 ## Verify final image and contents are correct.
 RUN bootc container lint
