@@ -48,12 +48,13 @@ RUN git clone https://github.com/marcin-fm/mediatek-mt7927-dkms.git \
 RUN install -d /usr/src/mediatek-mt7927-${MT7927_VER} \
     && cp -r /tmp/mediatek-mt7927-dkms/. /usr/src/mediatek-mt7927-${MT7927_VER}/
 
-RUN KERNEL_VER=$(ls /usr/lib/modules/ | grep bazzite | head -1) \
+RUN KERNEL_VER=$(ls /usr/lib/modules/ | head -1) \
+    && echo "Kernel trouvé: ${KERNEL_VER}" \
     && dkms add -m mediatek-mt7927 -v ${MT7927_VER} \
     && dkms build -m mediatek-mt7927 -v ${MT7927_VER} -k ${KERNEL_VER} \
     && dkms install --force -m mediatek-mt7927 -v ${MT7927_VER} -k ${KERNEL_VER}
 
-RUN KERNEL_VER=$(ls /usr/lib/modules/ | grep bazzite | head -1) \
+RUN KERNEL_VER=$(ls /usr/lib/modules/ | head -1) \
     && MODULE_DIR="/usr/lib/modules/${KERNEL_VER}/updates/dkms" \
     && test -f "${MODULE_DIR}/mt76.ko"    || (echo "ERREUR: mt76.ko manquant!"    && exit 1) \
     && test -f "${MODULE_DIR}/mt7925e.ko" || (echo "ERREUR: mt7925e.ko manquant!" && exit 1) \
@@ -64,7 +65,7 @@ RUN echo -e 'blacklist mt7925e\nblacklist mt76\ninstall mt7925e modprobe --ignor
 
 RUN echo 'add_drivers+=" mt76 mt7925e mt76_connac_lib "' \
       > /etc/dracut.conf.d/mt7927.conf \
-    && KERNEL_VER=$(ls /usr/lib/modules/ | grep bazzite | head -1) \
+    && KERNEL_VER=$(ls /usr/lib/modules/ | head -1) \
     && dracut --force --kver ${KERNEL_VER}
 
 RUN rm -rf /tmp/mediatek-mt7927-dkms
