@@ -118,6 +118,16 @@ RUN TOKEN_URL="https://cdnta.asus.com/api/v1/TokenHQ?filePath=https:%2F%2Fdlcdnt
     && echo "Firmware installé"
 
 RUN KERNEL_VER=$(ls /usr/lib/modules/ | head -1) \
+    && echo "Injection du header airoha manquant..." \
+    && tar -xf /tmp/linux-${MT76_KVER}.tar.xz \
+         "linux-${MT76_KVER}/include/linux/soc/airoha/airoha_offload.h" \
+    && mkdir -p /usr/src/kernels/${KERNEL_VER}/include/linux/soc/airoha/ \
+    && cp linux-${MT76_KVER}/include/linux/soc/airoha/airoha_offload.h \
+         /usr/src/kernels/${KERNEL_VER}/include/linux/soc/airoha/ \
+    && rm -rf linux-${MT76_KVER} \
+    && echo "Header injecté"
+
+RUN KERNEL_VER=$(ls /usr/lib/modules/ | head -1) \
     && dkms add -m mediatek-mt7927 -v ${MT7927_VER} \
     && dkms build -m mediatek-mt7927 -v ${MT7927_VER} -k ${KERNEL_VER} \
     || (cat /var/lib/dkms/mediatek-mt7927/${MT7927_VER}/build/make.log && exit 1) \
