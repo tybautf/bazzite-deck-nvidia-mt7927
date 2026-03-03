@@ -52,6 +52,14 @@ RUN install -d /usr/src/mediatek-mt7927-${MT7927_VER} \
 
 RUN KERNEL_VER=$(ls /usr/lib/modules/ | head -1) \
     && echo "Kernel trouvé: ${KERNEL_VER}" \
+    && KVER_BASE=$(echo ${KERNEL_VER} | grep -oP '^\d+\.\d+\.\d+') \
+    && echo "Téléchargement des sources kernel ${KVER_BASE}..." \
+    && wget -q https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-${KVER_BASE}.tar.xz \
+    && echo "Extraction de drivers/bluetooth..." \
+    && tar -xf linux-${KVER_BASE}.tar.xz --wildcards "linux-${KVER_BASE}/drivers/bluetooth/*" \
+    && cp -r linux-${KVER_BASE}/drivers/bluetooth /usr/src/mediatek-mt7927-${MT7927_VER}/drivers/ \
+    && rm -rf linux-${KVER_BASE} linux-${KVER_BASE}.tar.xz \
+    && echo "Sources bluetooth injectées dans le tree DKMS" \
     && dkms add -m mediatek-mt7927 -v ${MT7927_VER} \
     && dkms build -m mediatek-mt7927 -v ${MT7927_VER} -k ${KERNEL_VER} \
     || (cat /var/lib/dkms/mediatek-mt7927/${MT7927_VER}/build/make.log && exit 1) \
