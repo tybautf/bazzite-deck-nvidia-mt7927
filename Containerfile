@@ -67,7 +67,8 @@ RUN mkdir -p /tmp/bluetooth \
 
 RUN cd /tmp/mt76 \
     && patch -p1 < /tmp/mediatek-mt7927-dkms/mt7902-wifi-6.19.patch \
-    && patch -p1 < /tmp/mediatek-mt7927-dkms/mt6639-wifi-init.patch \
+    && ([ -f /tmp/mediatek-mt7927-dkms/mt6639-wifi-init.patch ] \
+        && patch -p1 < /tmp/mediatek-mt7927-dkms/mt6639-wifi-init.patch || true) \
     && patch -p1 < /tmp/mediatek-mt7927-dkms/mt6639-wifi-dma.patch \
     && echo "Patches wifi appliqués"
 
@@ -85,7 +86,6 @@ RUN DKMSDIR="/usr/src/mediatek-mt7927-${MT7927_VER}" \
     && install -Dm644 /tmp/mediatek-mt7927-dkms/dkms.conf           ${DKMSDIR}/dkms.conf \
     && install -Dm755 /tmp/mediatek-mt7927-dkms/dkms-patchmodule.sh  ${DKMSDIR}/dkms-patchmodule.sh \
     && install -Dm644 /tmp/mediatek-mt7927-dkms/mt6639-bt-6.19.patch ${DKMSDIR}/mt6639-bt-6.19.patch \
-    && install -Dm644 /tmp/mediatek-mt7927-dkms/mt6639-wifi-init.patch ${DKMSDIR}/mt6639-wifi-init.patch \
     && install -dm755 ${DKMSDIR}/drivers/bluetooth \
     && install -m644 /tmp/bluetooth/btusb.c  /tmp/bluetooth/btmtk.c \
                      /tmp/bluetooth/btmtk.h  /tmp/bluetooth/btbcm.c \
