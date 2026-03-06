@@ -45,11 +45,12 @@ RUN KERNEL_VER=$(ls /usr/lib/modules/ | head -1) \
          kernel-devel-${KERNEL_VER} \
     && dnf5 clean all
 
-RUN git clone https://github.com/jetm/mediatek-mt7927-dkms.git \
-      /tmp/mediatek-mt7927-dkms
-
 RUN wget -q https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-${MT76_KVER}.tar.xz \
       -O /tmp/linux-${MT76_KVER}.tar.xz
+
+ARG CACHE_BUST=1
+RUN git clone https://github.com/jetm/mediatek-mt7927-dkms.git \
+      /tmp/mediatek-mt7927-dkms
 
 RUN mkdir -p /tmp/mt76 \
     && tar -xf /tmp/linux-${MT76_KVER}.tar.xz \
