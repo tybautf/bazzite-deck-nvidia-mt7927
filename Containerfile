@@ -67,9 +67,10 @@ RUN mkdir -p /tmp/bluetooth \
 
 RUN cd /tmp/mt76 \
     && patch -p1 < /tmp/mediatek-mt7927-dkms/mt7902-wifi-6.19.patch \
-    && ([ -f /tmp/mediatek-mt7927-dkms/mt6639-wifi-init.patch ] \
-        && patch -p1 < /tmp/mediatek-mt7927-dkms/mt6639-wifi-init.patch || true) \
-    && patch -p1 < /tmp/mediatek-mt7927-dkms/mt6639-wifi-dma.patch \
+    && for p in /tmp/mediatek-mt7927-dkms/mt7927-wifi-*.patch; do \
+         echo "Applying $p..."; \
+         patch -p1 < "$p"; \
+       done \
     && echo "Patches wifi appliqués"
 
 RUN printf 'obj-m += mt76.o\nobj-m += mt76-connac-lib.o\nobj-m += mt792x-lib.o\nobj-m += mt7921/\nobj-m += mt7925/\n\nmt76-y := mmio.o util.o trace.o dma.o mac80211.o debugfs.o eeprom.o tx.o agg-rx.o mcu.o wed.o scan.o channel.o pci.o\n\nmt76-connac-lib-y := mt76_connac_mcu.o mt76_connac_mac.o mt76_connac3_mac.o\n\nmt792x-lib-y := mt792x_core.o mt792x_mac.o mt792x_trace.o mt792x_debugfs.o mt792x_dma.o mt792x_acpi_sar.o\n\nCFLAGS_trace.o := -I$(src)\nCFLAGS_mt792x_trace.o := -I$(src)\n' \
