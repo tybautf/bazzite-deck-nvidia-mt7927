@@ -86,7 +86,7 @@ RUN DKMSDIR="/usr/src/mediatek-mt7927-${MT7927_VER}" \
     && install -d ${DKMSDIR} \
     && install -Dm644 /tmp/mediatek-mt7927-dkms/dkms.conf           ${DKMSDIR}/dkms.conf \
     && install -Dm755 /tmp/mediatek-mt7927-dkms/dkms-patchmodule.sh  ${DKMSDIR}/dkms-patchmodule.sh \
-    && install -Dm644 /tmp/mediatek-mt7927-dkms/mt6639-bt-6.19.patch ${DKMSDIR}/mt6639-bt-6.19.patch \
+    && install -Dm644 /tmp/mediatek-mt7927-dkms/mt6639-bt-6.19.patch ${DKMSDIR}/patches/bt/mt6639-bt-6.19.patch \
     && install -dm755 ${DKMSDIR}/drivers/bluetooth \
     && install -m644 /tmp/bluetooth/btusb.c  /tmp/bluetooth/btmtk.c \
                      /tmp/bluetooth/btmtk.h  /tmp/bluetooth/btbcm.c \
