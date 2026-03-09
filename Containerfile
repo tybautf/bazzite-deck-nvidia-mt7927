@@ -36,7 +36,7 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     /ctx/build.sh
 
 # ── Driver MT7927 ─────────────────────────────────────────────────────────────
-ARG MT7927_VER="2.3"
+ARG MT7927_VER="2.4"
 ARG MT76_KVER="6.19.4"
 
 RUN KERNEL_VER=$(ls /usr/lib/modules/ | head -1) \
