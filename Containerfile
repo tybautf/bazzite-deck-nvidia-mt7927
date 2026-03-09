@@ -5,30 +5,7 @@ COPY build_files /
 # Base Image
 FROM ghcr.io/ublue-os/bazzite-deck-nvidia:stable
 
-## Other possible base images include:
-# FROM ghcr.io/ublue-os/bazzite:latest
-# FROM ghcr.io/ublue-os/bluefin-nvidia:stable
-# 
-# ... and so on, here are more base images
-# Universal Blue Images: https://github.com/orgs/ublue-os/packages
-# Fedora base image: quay.io/fedora/fedora-bootc:41
-# CentOS base images: quay.io/centos-bootc/centos-bootc:stream10
-
-### [IM]MUTABLE /opt
-## Some bootable images, like Fedora, have /opt symlinked to /var/opt, in order to
-## make it mutable/writable for users. However, some packages write files to this directory,
-## thus its contents might be wiped out when bootc deploys an image, making it troublesome for
-## some packages. Eg, google-chrome, docker-desktop.
-##
-## Uncomment the following line if one desires to make /opt immutable and be able to be used
-## by the package manager.
-
-# RUN rm /opt && mkdir /opt
-
 ### MODIFICATIONS
-## make modifications desired in your image and install packages by modifying the build.sh script
-## the following RUN directive does all the things required to run "build.sh" as recommended.
-
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=cache,dst=/var/cache \
     --mount=type=cache,dst=/var/log \
@@ -74,20 +51,18 @@ RUN cd /tmp/mt76 \
        done \
     && echo "Patches wifi appliqués"
 
-RUN printf 'obj-m += mt76.o\nobj-m += mt76-connac-lib.o\nobj-m += mt792x-lib.o\nobj-m += mt7921/\nobj-m += mt7925/\n\nmt76-y := mmio.o util.o trace.o dma.o mac80211.o debugfs.o eeprom.o tx.o agg-rx.o mcu.o wed.o scan.o channel.o pci.o\n\nmt76-connac-lib-y := mt76_connac_mcu.o mt76_connac_mac.o mt76_connac3_mac.o\n\nmt792x-lib-y := mt792x_core.o mt792x_mac.o mt792x_trace.o mt792x_debugfs.o mt792x_dma.o mt792x_acpi_sar.o\n\nCFLAGS_trace.o := -I$(src)\nCFLAGS_mt792x_trace.o := -I$(src)\n' \
-      > /tmp/mt76/Kbuild
-
-RUN printf 'obj-m += mt7921-common.o\nobj-m += mt7921e.o\n\nmt7921-common-y := mac.o mcu.o main.o init.o debugfs.o\nmt7921e-y := pci.o pci_mac.o pci_mcu.o\n' \
-      > /tmp/mt76/mt7921/Kbuild
-
-RUN printf 'obj-m += mt7925-common.o\nobj-m += mt7925e.o\n\nmt7925-common-y := mac.o mcu.o regd.o main.o init.o debugfs.o\nmt7925e-y := pci.o pci_mac.o pci_mcu.o\n' \
-      > /tmp/mt76/mt7925/Kbuild
+# Kbuild files fournis directement par le repo jetm
+RUN cp /tmp/mediatek-mt7927-dkms/mt76.Kbuild    /tmp/mt76/Kbuild \
+    && cp /tmp/mediatek-mt7927-dkms/mt7921.Kbuild /tmp/mt76/mt7921/Kbuild \
+    && cp /tmp/mediatek-mt7927-dkms/mt7925.Kbuild /tmp/mt76/mt7925/Kbuild
 
 RUN DKMSDIR="/usr/src/mediatek-mt7927-${MT7927_VER}" \
     && install -d ${DKMSDIR} \
-    && install -Dm644 /tmp/mediatek-mt7927-dkms/dkms.conf           ${DKMSDIR}/dkms.conf \
-    && install -Dm755 /tmp/mediatek-mt7927-dkms/dkms-patchmodule.sh  ${DKMSDIR}/dkms-patchmodule.sh \
-    && install -Dm644 /tmp/mediatek-mt7927-dkms/mt6639-bt-6.19.patch ${DKMSDIR}/patches/bt/mt6639-bt-6.19.patch \
+    && install -Dm644 /tmp/mediatek-mt7927-dkms/dkms.conf                    ${DKMSDIR}/dkms.conf \
+    && install -Dm644 /tmp/mediatek-mt7927-dkms/mt6639-bt-6.19.patch         ${DKMSDIR}/patches/bt/mt6639-bt-6.19.patch \
+    && install -dm755 ${DKMSDIR}/patches/wifi \
+    && install -m644 /tmp/mediatek-mt7927-dkms/mt7902-wifi-6.19.patch        ${DKMSDIR}/patches/wifi/ \
+    && install -m644 /tmp/mediatek-mt7927-dkms/mt7927-wifi-*.patch           ${DKMSDIR}/patches/wifi/ \
     && install -dm755 ${DKMSDIR}/drivers/bluetooth \
     && install -m644 /tmp/bluetooth/btusb.c  /tmp/bluetooth/btmtk.c \
                      /tmp/bluetooth/btmtk.h  /tmp/bluetooth/btbcm.c \
@@ -135,11 +110,12 @@ RUN KERNEL_VER=$(ls /usr/lib/modules/ | head -1) \
     || (cat /var/lib/dkms/mediatek-mt7927/${MT7927_VER}/build/make.log && exit 1) \
     && dkms install --force -m mediatek-mt7927 -v ${MT7927_VER} -k ${KERNEL_VER}
 
+# Vérification — jetm installe dans /updates/dkms/ (pas /extra/)
 RUN KERNEL_VER=$(ls /usr/lib/modules/ | head -1) \
     && echo "Modules installés:" \
-    && find /usr/lib/modules/${KERNEL_VER}/extra/ -name "*.ko*" | sort \
-    && test -f "/usr/lib/modules/${KERNEL_VER}/extra/mt76.ko.xz"    || (echo "ERREUR: mt76.ko.xz manquant!"    && exit 1) \
-    && test -f "/usr/lib/modules/${KERNEL_VER}/extra/mt7925e.ko.xz" || (echo "ERREUR: mt7925e.ko.xz manquant!" && exit 1) \
+    && find /usr/lib/modules/${KERNEL_VER}/updates/dkms/ -name "*.ko*" | sort \
+    && test -f "/usr/lib/modules/${KERNEL_VER}/updates/dkms/mt76.ko.xz"    || (echo "ERREUR: mt76.ko.xz manquant!"    && exit 1) \
+    && test -f "/usr/lib/modules/${KERNEL_VER}/updates/dkms/mt7925e.ko.xz" || (echo "ERREUR: mt7925e.ko.xz manquant!" && exit 1) \
     && echo "OK: mt76.ko.xz et mt7925e.ko.xz présents"
 
 RUN echo -e 'install mt7925e modprobe --ignore-install mt7925e\ninstall mt76 modprobe --ignore-install mt76' \
@@ -156,5 +132,4 @@ RUN rm -rf /tmp/mediatek-mt7927-dkms /tmp/mt76 /tmp/bluetooth \
 RUN echo 'mt7925e' > /etc/modules-load.d/mt7927.conf
 
 ### LINTING
-## Verify final image and contents are correct.
 RUN bootc container lint
