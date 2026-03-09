@@ -68,6 +68,8 @@ RUN DKMSDIR="/usr/src/mediatek-mt7927-${MT7927_VER}" \
                      /tmp/bluetooth/btmtk.h  /tmp/bluetooth/btbcm.c \
                      /tmp/bluetooth/btbcm.h  /tmp/bluetooth/btintel.h \
                      /tmp/bluetooth/btrtl.h  ${DKMSDIR}/drivers/bluetooth/ \
+    & install -m644 /tmp/mediatek-mt7927-dkms/bluetooth.Makefile \
+                     ${DKMSDIR}/drivers/bluetooth/Makefile \
     && install -dm755 ${DKMSDIR}/mt76/mt7921 ${DKMSDIR}/mt76/mt7925 \
     && install -m644 /tmp/mt76/*.c /tmp/mt76/*.h ${DKMSDIR}/mt76/ \
     && install -m644 /tmp/mt76/Kbuild             ${DKMSDIR}/mt76/ \
