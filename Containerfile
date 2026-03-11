@@ -115,9 +115,10 @@ RUN KERNEL_VER=$(ls /usr/lib/modules/ | head -1) \
 # Vérification — jetm installe dans /updates/dkms/ (pas /extra/)
 RUN KERNEL_VER=$(ls /usr/lib/modules/ | head -1) \
     && echo "Modules installés:" \
-    && find /usr/lib/modules/${KERNEL_VER}/ -name "mt7925e.ko*" -o -name "mt76.ko*" | sort \
-    && echo "Arborescence updates/extra:" \
-    && find /usr/lib/modules/${KERNEL_VER}/ -maxdepth 2 -type d | sort
+    && find /usr/lib/modules/${KERNEL_VER}/extra/ -name "*.ko*" | sort \
+    && test -f "/usr/lib/modules/${KERNEL_VER}/extra/mt76.ko.xz"    || (echo "ERREUR: mt76.ko.xz manquant!"    && exit 1) \
+    && test -f "/usr/lib/modules/${KERNEL_VER}/extra/mt7925e.ko.xz" || (echo "ERREUR: mt7925e.ko.xz manquant!" && exit 1) \
+    && echo "OK: mt76.ko.xz et mt7925e.ko.xz présents"
 
 RUN echo -e 'install mt7925e modprobe --ignore-install mt7925e\ninstall mt76 modprobe --ignore-install mt76' \
       > /etc/modprobe.d/mt7927-override.conf
