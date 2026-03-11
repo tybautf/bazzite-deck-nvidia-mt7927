@@ -23,7 +23,7 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=cache,dst=/var/cache \
     --mount=type=tmpfs,dst=/tmp \
     MT7927_VER=${MT7927_VER} MT76_KVER=${MT76_KVER} \
-    /ctx/build-mt7927.sh
+    bash /ctx/build-mt7927.sh
 
 # ── Drivers Nvidia beta ───────────────────────────────────────────────────────
 # Décommenter quand build-nvidia-beta.sh est prêt
