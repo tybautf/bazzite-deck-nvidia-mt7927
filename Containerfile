@@ -16,7 +16,7 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
 # MT7927_VER : version du package DKMS jetm
 # MT76_KVER  : version du tarball kernel.org servant de base aux sources mt76
 # CACHE_BUST : incrémenter pour forcer le re-clone du repo jetm
-ARG MT7927_VER="2.7"
+ARG MT7927_VER="2.8"
 ARG MT76_KVER="6.19.4"
 ARG CACHE_BUST=1
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
