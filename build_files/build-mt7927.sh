@@ -61,7 +61,7 @@ echo "Patches WiFi appliqués"
 # ── 5. Patches Bluetooth ─────────────────────────────────────────────────────
 echo "--- Application des patches Bluetooth"
 cd /tmp/bluetooth
-for p in /tmp/mediatek-mt7927-dkms/mt6639-bt-[0-9]*.patch; do
+for p in /tmp/mediatek-mt7927-dkms/mt6639-bt-*.patch; do
     echo "  Applying $(basename $p)..."
     patch -p1 < "$p"
 done
@@ -87,7 +87,7 @@ install -Dm644 /tmp/mediatek-mt7927-dkms/dkms.conf "${DKMSDIR}/dkms.conf"
 
 # Patches (référence)
 install -dm755 "${DKMSDIR}/patches/bt" "${DKMSDIR}/patches/wifi"
-install -m644 /tmp/mediatek-mt7927-dkms/mt6639-bt-[0-9]*.patch \
+install -m644 /tmp/mediatek-mt7927-dkms/mt6639-bt-*.patch \
     "${DKMSDIR}/patches/bt/"
 install -m644 /tmp/mediatek-mt7927-dkms/mt7902-wifi-6.19.patch \
     "${DKMSDIR}/patches/wifi/"
