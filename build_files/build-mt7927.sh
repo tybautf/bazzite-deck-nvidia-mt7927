@@ -11,7 +11,8 @@ set -euo pipefail
 DKMSDIR="/usr/src/mediatek-mt7927-${MT7927_VER}"
 KERNEL_VER=$(ls /usr/lib/modules/ | head -1)
 REPO_URL="https://github.com/jetm/mediatek-mt7927-dkms.git"
-TARBALL_URL="https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-${MT76_KVER}.tar.xz"
+MT76_KMAJ="${MT76_KVER%%.*}"
+TARBALL_URL="https://cdn.kernel.org/pub/linux/kernel/v${MT76_KMAJ}.x/linux-${MT76_KVER}.tar.xz"
 
 ASUS_ZIP_URL="https://dlcdnta.asus.com/pub/ASUS/mb/08WIRELESS/DRV_WiFi_MTK_MT7925_MT7927_TP_W11_64_V5603998_20250709R.zip?model=ROG%20CROSSHAIR%20X870E%20HERO"
 ASUS_TOKEN_URL="https://cdnta.asus.com/api/v1/TokenHQ?filePath=https:%2F%2Fdlcdnta.asus.com%2Fpub%2FASUS%2Fmb%2F08WIRELESS%2FDRV_WiFi_MTK_MT7925_MT7927_TP_W11_64_V5603998_20250709R.zip%3Fmodel%3DROG%2520CROSSHAIR%2520X870E%2520HERO&systemCode=rog"

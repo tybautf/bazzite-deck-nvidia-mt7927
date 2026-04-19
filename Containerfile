@@ -17,8 +17,8 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
 # MT76_KVER  : version du tarball kernel.org servant de base aux sources mt76
 # CACHE_BUST : incrémenter pour forcer le re-clone du repo jetm
 ARG MT7927_VER="2.11"
-ARG MT76_KVER="6.19.10"
-ARG CACHE_BUST=1
+ARG MT76_KVER="7.0"
+ARG CACHE_BUST=2
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=cache,dst=/var/cache \
     --mount=type=tmpfs,dst=/tmp \
